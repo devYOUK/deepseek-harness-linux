@@ -11,4 +11,8 @@ while [ -L "$launcher" ]; do
   esac
 done
 resources=$(CDPATH= cd -- "$(dirname -- "$launcher")/../../.." && pwd -P)
-ELECTRON_RUN_AS_NODE=1 exec "$resources/../MacOS/DeepSeek Harness" --expose-internals "$resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-desktop-host/lib/cli.js" "$@"
+# Linux packs the executable beside resources/; macOS keeps it under Contents/MacOS.
+app="$resources/../deepseek-harness"
+if [ ! -x "$app" ]; then app="$resources/../DeepSeek Harness"; fi
+if [ ! -x "$app" ]; then app="$resources/../MacOS/DeepSeek Harness"; fi
+ELECTRON_RUN_AS_NODE=1 exec "$app" --expose-internals "$resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-desktop-host/lib/cli.js" "$@"
