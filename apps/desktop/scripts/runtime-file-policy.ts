@@ -27,6 +27,11 @@ export function desktopRuntimeFileExclusion(
   if (name.startsWith('@deepseek-ai/libreoffice-kit-')) {
     if (name !== `@deepseek-ai/libreoffice-kit-${officeEngine}`) return 'LibreOffice other platform'
   }
+  // Electron's Linux process links system glib, which collides with libvips' bundled glib
+  // (electron#46323); sharp falls back to @img/sharp-wasm32 when this binding is absent.
+  if (target.platform === 'linux' && (name === '@img/sharp-linux-x64' || name === '@img/sharp-libvips-linux-x64')) {
+    return 'sharp native binding incompatible with Electron glib on Linux'
+  }
   if (name === 'fs-ext' && /^build\/(?:Release|Debug)\/(?:obj(?:\/|$)|fs_ext\.(?:exp|lib|pdb|iobj|ipdb)$)/u.test(entry)) {
     return 'fs-ext compiler output'
   }
