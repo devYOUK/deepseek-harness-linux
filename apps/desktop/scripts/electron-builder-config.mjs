@@ -253,6 +253,9 @@ export function createElectronBuilderConfig(
       icon: fileURLToPath(new URL('../resources/icon.png', import.meta.url)),
       // The manifest name carries an npm scope, which is invalid in an executable file name.
       executableName: 'deepseek-harness',
+      // Name the installed .desktop file after package.json desktopName so Electron's
+      // Wayland app_id / WM_CLASS matches it and desktops link windows to our icon.
+      syncDesktopName: true,
       // Required by the deb target; local builds are not published under an official address.
       maintainer: 'DeepSeek Harness <local@localhost>',
       category: 'Development',
