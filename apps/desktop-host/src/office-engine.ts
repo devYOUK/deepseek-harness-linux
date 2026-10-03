@@ -24,14 +24,20 @@ export function installOfficeEngineResolution(runtimeDir: string): ModuleHooks |
   if (runtimeArchivePath(runtimeDir) === undefined) return undefined
   const root = realpathSync(runtimeDir)
   const archive = dirname(root)
-  const source = pathToFileURL(join(root, 'node_modules', '@deepseek-ai', 'libreoffice-kit-')).href
-  const destination = pathToFileURL(join(`${archive}.unpacked`, relative(archive, root), 'node_modules', '@deepseek-ai', 'libreoffice-kit-')).href
+  // The prefix also covers the adapter itself (`libreoffice-kit`), whose asar-located
+  // module paths must stay physical: Electron's asar lstat reports missing entries as
+  // null rather than undefined, which breaks the adapter's installed-package probe.
+  const source = pathToFileURL(join(root, 'node_modules', '@deepseek-ai', 'libreoffice-kit')).href
+  const destination = pathToFileURL(join(`${archive}.unpacked`, relative(archive, root), 'node_modules', '@deepseek-ai', 'libreoffice-kit')).href
   return registerHooks({
     resolve(specifier, context, nextResolve) {
       const resolved = nextResolve(specifier, context)
       if (!resolved.url.startsWith('file:')) return resolved
-      const engineRequest = /^@deepseek-ai\/libreoffice-kit-(?:darwin|win32|linux)-/u.test(specifier)
-      const engineTarget = /\/node_modules\/@deepseek-ai\/libreoffice-kit-(?:darwin|win32|linux)-[^/]+\//u
+      // The prefix also covers the adapter itself and the WASM engine: their module paths
+      // must stay physical on Linux, where Electron's asar lstat reports missing entries
+      // as null and would break the adapter's installed-package probe.
+      const engineRequest = /^@deepseek-ai\/libreoffice-kit/u.test(specifier)
+      const engineTarget = /\/node_modules\/@deepseek-ai\/libreoffice-kit(?:-[^/]+)?\//u
         .test(new URL(resolved.url).pathname)
       if (!engineRequest && !engineTarget) return resolved
       const canonical = pathToFileURL(realpathSync(fileURLToPath(resolved.url))).href

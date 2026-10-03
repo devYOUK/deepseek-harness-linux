@@ -17,7 +17,7 @@ export function localMacOSPackageEnvironment(environment?: NodeJS.ProcessEnv): N
  * @returns Isolated environment with file-owned release settings.
  */
 export function loadDesktopPackageEnvironment(
-  platform: 'win32' | 'darwin',
+  platform: 'win32' | 'darwin' | 'linux',
   environment?: NodeJS.ProcessEnv,
   appRoot?: string,
   options?: { unsigned?: boolean, prepareOnly?: boolean },
@@ -32,6 +32,11 @@ export function loadDesktopPackageEnvironment(
  */
 export function validateDesktopPackageEnvironment(
   environment: NodeJS.ProcessEnv,
+<<<<<<< HEAD
   target: { platform: 'win32' | 'darwin', arch: string },
   options?: { unsigned?: boolean, prepareOnly?: boolean, skipNotarization?: boolean },
+=======
+  target: { platform: 'win32' | 'darwin' | 'linux', arch: string },
+  options?: { unsigned?: boolean, prepareOnly?: boolean },
+>>>>>>> 0bcdf1aba5 (Support building the desktop app for linux-x64 (AppImage and deb))
 ): void

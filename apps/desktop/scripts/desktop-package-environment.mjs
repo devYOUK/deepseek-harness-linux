@@ -16,7 +16,13 @@ import { resolveWindowsPackageSettings } from './windows-package-settings.mjs'
 const APP_ROOT = fileURLToPath(new URL('..', import.meta.url))
 const SHARED_SETTING = /^(?:DSH_DESKTOP_(?:APP_ID|AUTO_UPDATE_ENV|NPM_REGISTRY|MANDATORY_UPDATE_(?:CONFIG|(?:TEST|PROD)_ORIGIN))|DOWNLOAD_TEST_RELEASE_ID|DOWNLOAD_(?:TEST|PROD)_(?:ORIGIN|COS_BUCKET|COS_SECRET_ID|COS_SECRET_KEY))$/u
 const WINDOWS_SETTING = /^DSH_DESKTOP_WINDOWS_(?:CER_FILE|SIGNTOOL|KEY_CONTAINER|TOKEN_PIN|SIGNATURE_CACHE_DIR|SIGNATURE_CACHE_CONCURRENCY)$/u
+<<<<<<< HEAD
 const MACOS_SETTING = /^(?:DSH_DESKTOP_MACOS_(?:SIGNING_IDENTITY|TEAM_ID|SIGNATURE_CACHE_DIR|PACK_CONCURRENCY|DOWNLOAD_PROXY|NOTARIZATION_PROXY)|APPLE_(?:API_KEY|API_KEY_ID|API_ISSUER|ID|APP_SPECIFIC_PASSWORD|TEAM_ID|KEYCHAIN|KEYCHAIN_PROFILE)|CSC_(?:LINK|KEY_PASSWORD))$/u
+=======
+const MACOS_SETTING = /^(?:DSH_DESKTOP_MACOS_(?:SIGNING_IDENTITY|TEAM_ID|PACK_CONCURRENCY|DOWNLOAD_PROXY|NOTARIZATION_PROXY)|APPLE_(?:API_KEY|API_KEY_ID|API_ISSUER|ID|APP_SPECIFIC_PASSWORD|TEAM_ID|KEYCHAIN|KEYCHAIN_PROFILE)|CSC_(?:LINK|KEY_PASSWORD))$/u
+// Linux builds use no signing or platform release settings; every accepted key is a shared one.
+const LINUX_SETTING = /^$/u
+>>>>>>> 0bcdf1aba5 (Support building the desktop app for linux-x64 (AppImage and deb))
 const AMBIENT_RELEASE_SETTING = /^(?:DSH_DESKTOP_(?:APP_ID|AUTO_UPDATE_ENV|MANDATORY_UPDATE_.*|WINDOWS_.*|MACOS_.*)|APPLE_.*|(?:WIN_)?CSC_.*|DOWNLOAD_(?:TEST|PROD)_.*)$/iu
 const FILE_SETTINGS = ['DSH_DESKTOP_WINDOWS_CER_FILE', 'DSH_DESKTOP_WINDOWS_SIGNTOOL', 'APPLE_API_KEY', 'APPLE_KEYCHAIN', 'CSC_LINK']
 
@@ -34,14 +40,20 @@ export function localMacOSPackageEnvironment(environment = process.env) {
 }
 
 /**
+<<<<<<< HEAD
  * Read a machine preset when selected, otherwise the target's required dotenv; no ambient release fallback.
  * PACKAGE_TEST_RELEASE_ID overrides the test preset only; blank retains its configured ID.
  * @param {'win32' | 'darwin'} platform Target platform.
+=======
+ * Read the target's required UTF-8 dotenv file; release settings never fall back to ambient values.
+ * @param {'win32' | 'darwin' | 'linux'} platform Target platform.
+>>>>>>> 0bcdf1aba5 (Support building the desktop app for linux-x64 (AppImage and deb))
  * @param {NodeJS.ProcessEnv} environment Parent environment, retained only for unrelated build tools.
  * @param {string} appRoot Desktop application directory; relative credential paths resolve here.
  * @param {{ unsigned?: boolean, prepareOnly?: boolean }} options Unsigned presets and Windows preparation-only presets never read signing credentials.
  * @returns {NodeJS.ProcessEnv} Isolated environment with file-owned release settings.
  */
+<<<<<<< HEAD
 export function loadDesktopPackageEnvironment(platform, environment = process.env, appRoot = APP_ROOT, options = {}) {
   const preset = environment.DSH_PACKAGING_PRESET
   let path = join(appRoot, platform === 'win32' ? '.env.windows' : '.env.macos')
@@ -89,6 +101,10 @@ export function loadDesktopPackageEnvironment(platform, environment = process.en
  * @returns {NodeJS.ProcessEnv} Validated file settings.
  */
 function readSettings(path, accepts) {
+=======
+export function loadDesktopPackageEnvironment(platform, environment = process.env, appRoot = APP_ROOT) {
+  const path = join(appRoot, platform === 'win32' ? '.env.windows' : platform === 'linux' ? '.env.linux' : '.env.macos')
+>>>>>>> 0bcdf1aba5 (Support building the desktop app for linux-x64 (AppImage and deb))
   let contents
   try {
     contents = readFileSync(path, 'utf8')
@@ -98,12 +114,16 @@ function readSettings(path, accepts) {
   }
   let settings
   try {
-    settings = parseEnv(contents.replace(/^\uFEFF/u, ''))
+    settings = parseEnv(contents.replace(/^﻿/u, ''))
   }
   catch {
     // Parser diagnostics can contain credential-bearing input.
     throw new Error(`desktop package: invalid dotenv syntax in ${path}`)
   }
+<<<<<<< HEAD
+=======
+  const platformSetting = platform === 'win32' ? WINDOWS_SETTING : platform === 'linux' ? LINUX_SETTING : MACOS_SETTING
+>>>>>>> 0bcdf1aba5 (Support building the desktop app for linux-x64 (AppImage and deb))
   for (const name of Object.keys(settings)) {
     if (!accepts(name)) {
       throw new Error(`desktop package: unsupported setting ${name} in ${path}; use the platform template`)
@@ -129,18 +149,26 @@ function requireReadableFile(environment, name) {
 /**
  * Validate the packaging mode before preparation without invoking a token or Apple's services.
  * @param {NodeJS.ProcessEnv} environment Selected local defaults or file-owned release settings.
+<<<<<<< HEAD
  * @param {{ platform: 'win32' | 'darwin', arch: string }} target Selected release target.
  * @param {{ unsigned?: boolean, prepareOnly?: boolean, skipNotarization?: boolean }} options Explicit packaging mode.
+=======
+ * @param {{ platform: 'win32' | 'darwin' | 'linux', arch: string }} target Selected release target.
+ * @param {{ unsigned?: boolean, prepareOnly?: boolean }} options Explicit packaging mode.
+>>>>>>> 0bcdf1aba5 (Support building the desktop app for linux-x64 (AppImage and deb))
  * @returns {void}
  */
 export function validateDesktopPackageEnvironment(environment, target, options = {}) {
   resolveDesktopAppId(environment)
   resolveNpmRegistry(environment)
-  if (target.platform !== 'darwin' || !options.unsigned) resolveDesktopPolicyEnvironment(environment)
+  // Linux ships neither mandatory-update policy nor auto-update feeds.
+  if (target.platform !== 'linux' && (target.platform !== 'darwin' || !options.unsigned)) {
+    resolveDesktopPolicyEnvironment(environment)
+  }
   if (target.platform === 'darwin') resolveMacOSPackageSettings(environment)
-  else resolveWindowsPackageSettings(environment)
+  else if (target.platform === 'win32') resolveWindowsPackageSettings(environment)
   if (options.unsigned) return
-  if (!options.prepareOnly) resolveDesktopAutoUpdateConfig(environment, target.platform, target.arch)
+  if (!options.prepareOnly && target.platform !== 'linux') resolveDesktopAutoUpdateConfig(environment, target.platform, target.arch)
   if (target.platform === 'win32') {
     if (!options.prepareOnly) createWindowsTokenSigner({
       certificateFile: environment.DSH_DESKTOP_WINDOWS_CER_FILE,
@@ -149,8 +177,12 @@ export function validateDesktopPackageEnvironment(environment, target, options =
       keyContainer: environment.DSH_DESKTOP_WINDOWS_KEY_CONTAINER,
     })
     if (!options.prepareOnly) resolveWindowsSignatureCacheDirectory(environment)
+<<<<<<< HEAD
   } else {
     if (environment.DSH_DESKTOP_MACOS_SIGNATURE_CACHE_DIR !== undefined) validateMacOSSignatureCacheDirectory(environment.DSH_DESKTOP_MACOS_SIGNATURE_CACHE_DIR)
+=======
+  } else if (target.platform === 'darwin') {
+>>>>>>> 0bcdf1aba5 (Support building the desktop app for linux-x64 (AppImage and deb))
     resolveMacOSSigningEnvironment(environment)
     if (!options.skipNotarization) {
       const strategies = [
