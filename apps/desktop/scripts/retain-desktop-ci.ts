@@ -28,12 +28,23 @@ export function desktopReleasesRoot(env: NodeJS.ProcessEnv): string {
 }
 
 /**
+ * Resolve the CI-retained target; Linux packages are built locally and have no retained workflow.
+ * @param env Machine identity and fixed target selection.
+ * @returns One of the packaging workflows whose artifacts this store accepts.
+ */
+function ciRetentionTarget(env: NodeJS.ProcessEnv): Exclude<ReturnType<typeof resolveDesktopBuildTarget>, 'linux-x64'> {
+  const target = resolveDesktopBuildTarget(env)
+  if (target === 'linux-x64') throw new Error('desktop retention: linux-x64 has no retained CI workflow')
+  return target
+}
+
+/**
  * Resolve the original machine's unique label before expensive packaging work.
  * @param env Machine identity, target and administrator-owned runner mapping.
  * @returns The exact label used by the later GitHub archival job.
  */
 export function resolveDesktopRetentionRunner(env: NodeJS.ProcessEnv): string {
-  const target = resolveDesktopBuildTarget(env)
+  const target = ciRetentionTarget(env)
   const routes = desktopPublishRunnersSchema.parse(JSON.parse(required(env, 'DESKTOP_PUBLISH_RUNNERS')))
   const route = routes[required(env, 'RUNNER_NAME')]
   if (!route || !route.target.includes(target)
@@ -50,7 +61,7 @@ export function resolveDesktopRetentionRunner(env: NodeJS.ProcessEnv): string {
  * @returns Retained directory, including explicitly qualified debugging packages.
  */
 export async function retainDesktopCi(env: NodeJS.ProcessEnv, appRoot = resolve(import.meta.dirname, '..')): Promise<string> {
-  const target = resolveDesktopBuildTarget(env)
+  const target = ciRetentionTarget(env)
   const runnerLabel = resolveDesktopRetentionRunner(env)
   const windows = target === 'win-x64'
   const platform = windows ? 'win32' : 'darwin'
